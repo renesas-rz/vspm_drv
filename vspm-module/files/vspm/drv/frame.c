@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -57,6 +57,8 @@
 
 #include <linux/slab.h>
 #include <linux/sched.h>
+#include <linux/version.h>
+#include <linux/kthread.h>
 
 #include "frame.h"
 
@@ -401,7 +403,11 @@ int fw_execute(unsigned short tid, struct fw_func_tbl *func_tbl)
 	}
 
 	/* Do exit kthread */
-	do_exit(FW_OK);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0))
+	kthread_complete_and_exit(NULL, FW_OK);
+#else
+    do_exit(FW_OK);
+#endif
 	return FW_OK;
 }
 
