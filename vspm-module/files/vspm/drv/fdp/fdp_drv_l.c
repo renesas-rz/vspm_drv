@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -301,10 +301,51 @@ static long fdp_ins_check_dstbuf_param(
 	case FDP_YUV420_PLANAR:
 	case FDP_YUV422_PLANAR:
 		stride_c >>= 1;
+		/* check c1 address */
+		if (buf->addr_c1 == 0)
+			return E_FDP_PARA_DST_ADDR_C1;
+
+		/* check c0 address */
+		if (buf->addr_c0 == 0)
+			return E_FDP_PARA_DST_ADDR_C0;
+
+		/* check chroma stride */
+		if (buf->stride_c < stride_c)
+			return E_FDP_PARA_DST_STRIDE_C;
+
+		stride >>= 1;
+
+		/* check luma address */
+		if (buf->addr == 0)
+			return E_FDP_PARA_DST_ADDR;
+
+		/* check luma stride */
+		if (buf->stride < stride)
+			return E_FDP_PARA_DST_STRIDE;
+		break;
 	case FDP_YUV444_PLANAR:
 		/* check c1 address */
 		if (buf->addr_c1 == 0)
 			return E_FDP_PARA_DST_ADDR_C1;
+
+		/* check c0 address */
+		if (buf->addr_c0 == 0)
+			return E_FDP_PARA_DST_ADDR_C0;
+
+		/* check chroma stride */
+		if (buf->stride_c < stride_c)
+			return E_FDP_PARA_DST_STRIDE_C;
+
+		stride >>= 1;
+
+		/* check luma address */
+		if (buf->addr == 0)
+			return E_FDP_PARA_DST_ADDR;
+
+		/* check luma stride */
+		if (buf->stride < stride)
+			return E_FDP_PARA_DST_STRIDE;
+		break;
 	/* semi-planar */
 	case FDP_YUV420:
 	case FDP_YUV420_NV21:
@@ -318,6 +359,15 @@ static long fdp_ins_check_dstbuf_param(
 			return E_FDP_PARA_DST_STRIDE_C;
 
 		stride >>= 1;
+
+		/* check luma address */
+		if (buf->addr == 0)
+			return E_FDP_PARA_DST_ADDR;
+
+		/* check luma stride */
+		if (buf->stride < stride)
+			return E_FDP_PARA_DST_STRIDE;
+		break;
 	/* interleaved */
 	case FDP_YUV422_YUY2:
 	case FDP_YUV422_UYVY:
@@ -372,10 +422,51 @@ static long fdp_ins_check_refbuf_param(
 	case FDP_YUV420_PLANAR:
 	case FDP_YUV422_PLANAR:
 		stride_c >>= 1;
+		/* check c1 address */
+		if (buf->addr_c1 == 0)
+			return E_FDP_PARA_SRC_ADDR_C1;
+
+		/* check c0 address */
+		if (buf->addr_c0 == 0)
+			return E_FDP_PARA_SRC_ADDR_C0;
+
+		/* check chroma stride */
+		if (buf->stride_c < stride_c)
+			return E_FDP_PARA_SRC_STRIDE_C;
+
+		stride >>= 1;
+
+		/* check luma address */
+		if (buf->addr == 0)
+			return E_FDP_PARA_SRC_ADDR;
+
+		/* check luma stride */
+		if (buf->stride < stride)
+			return E_FDP_PARA_SRC_STRIDE;
+		break;
 	case FDP_YUV444_PLANAR:
 		/* check c1 address */
 		if (buf->addr_c1 == 0)
 			return E_FDP_PARA_SRC_ADDR_C1;
+
+		/* check c0 address */
+		if (buf->addr_c0 == 0)
+			return E_FDP_PARA_SRC_ADDR_C0;
+
+		/* check chroma stride */
+		if (buf->stride_c < stride_c)
+			return E_FDP_PARA_SRC_STRIDE_C;
+
+		stride >>= 1;
+
+		/* check luma address */
+		if (buf->addr == 0)
+			return E_FDP_PARA_SRC_ADDR;
+
+		/* check luma stride */
+		if (buf->stride < stride)
+			return E_FDP_PARA_SRC_STRIDE;
+		break;
 	/* semi-planar */
 	case FDP_YUV420:
 	case FDP_YUV420_NV21:
@@ -389,6 +480,15 @@ static long fdp_ins_check_refbuf_param(
 			return E_FDP_PARA_SRC_STRIDE_C;
 
 		stride >>= 1;
+
+		/* check luma address */
+		if (buf->addr == 0)
+			return E_FDP_PARA_SRC_ADDR;
+
+		/* check luma stride */
+		if (buf->stride < stride)
+			return E_FDP_PARA_SRC_STRIDE;
+		break;
 	/* interleaved */
 	case FDP_YUV422_YUY2:
 	case FDP_YUV422_UYVY:
