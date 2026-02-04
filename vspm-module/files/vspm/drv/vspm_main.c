@@ -557,6 +557,7 @@ static int vspm_pm_suspend(struct device *dev)
 			(void)vspm_suspend(pdrv);
 		}
 	}
+	pm_runtime_force_suspend(dev);
 
 	return 0;
 }
@@ -565,6 +566,7 @@ static int vspm_pm_resume(struct device *dev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 
+	pm_runtime_force_resume(dev);
 	if (atomic_sub_return(1, &pdrv->suspend) == 0) {
 		/* last resume */
 		if (atomic_read(&pdrv->counter) != 0) {
