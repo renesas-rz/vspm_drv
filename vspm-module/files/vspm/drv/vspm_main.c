@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -443,6 +443,73 @@ static int vspm_fdp_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int vspm_isu_probe(struct platform_device *pdev)
+{
+	struct vspm_drvdata *pdrv = p_vspm_drvdata;
+	struct device_node *np = pdev->dev.of_node;
+	struct clk *clk;
+	int ch;
+
+	/* get channel */
+	of_property_read_u32(np, "renesas,#ch", &ch);
+	if (ch < 0) {
+		APRINT("Not find define of renesas,#ch.\n");
+		return -1;
+	}
+
+	if (ch >= VSPM_ISU_IP_MAX) {
+		APRINT("Invalid channel!! ch=%d\n", ch);
+		return -1;
+	}
+
+	if (pdrv->isu_pdev[ch]) {
+		APRINT("Already registered channel!! ch=%d\n", ch);
+		return -1;
+	}
+
+	/* set clocks */
+	clk = devm_clk_get(&pdev->dev, ISU_CLK_NAME);
+	if (IS_ERR(clk)) {
+		APRINT("Cannot get %s clock!! ch=%d\n",ISU_CLK_NAME, ch);
+		return -1;
+	}
+
+	pdrv->isu_clks[ch][0] = clk;
+
+	/* set driver data */
+	platform_set_drvdata(pdev, &pdrv->isu_clks[ch]);
+	pdrv->isu_pdev[ch] = pdev;
+
+	/* set runtime PM */
+	pm_suspend_ignore_children(&pdev->dev, true);
+	pm_runtime_enable(&pdev->dev);
+
+	return 0;
+}
+
+static int vspm_isu_remove(struct platform_device *pdev)
+{
+	struct vspm_drvdata *pdrv = p_vspm_drvdata;
+	struct device_node *np = pdev->dev.of_node;
+
+	int ch;
+
+	/* unset runtime PM */
+	pm_runtime_disable(&pdev->dev);
+
+	/* get channel */
+	of_property_read_u32(np, "renesas,#ch", &ch);
+
+	/* unset driver data */
+	platform_set_drvdata(pdev, NULL);
+	pdrv->isu_pdev[ch] = NULL;
+
+	/* unset clocks */
+	pdrv->isu_clks[ch][0] = NULL;
+
+	return 0;
+}
+
 static int vspm_pm_suspend(struct device *dev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
@@ -517,6 +584,12 @@ static const struct dev_pm_ops vspm_fdp_pm_ops = {
 		vspm_pm_runtime_suspend, vspm_pm_runtime_resume, NULL)
 };
 
+static const struct dev_pm_ops vspm_isu_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(vspm_pm_suspend, vspm_pm_resume)
+	SET_RUNTIME_PM_OPS(
+		vspm_pm_runtime_suspend, vspm_pm_runtime_resume, NULL)
+};
+
 static const struct of_device_id vspm_vsp_of_match[] = {
 	{ .compatible = "renesas,vspm" },
 	{ },
@@ -525,6 +598,10 @@ static const struct of_device_id vspm_vsp_of_match[] = {
 static const struct of_device_id vspm_fdp_of_match[] = {
 	{ .compatible = "renesas,fdpm" },
 	{ },
+};
+
+static const struct of_device_id vspm_isu_of_match[] = {
+	{ .compatible = "renesas,isum" },
 };
 
 static struct platform_driver vspm_vsp_driver = {
@@ -549,23 +626,41 @@ static struct platform_driver vspm_fdp_driver = {
 	.remove		= vspm_fdp_remove,
 };
 
+static struct platform_driver vspm_isu_driver = {
+	.driver = {
+		.name	= DEVNAME "-isu",
+		.owner	= THIS_MODULE,
+		.pm		= &vspm_isu_pm_ops,
+		.of_match_table = vspm_isu_of_match,
+	},
+	.probe		= vspm_isu_probe,
+	.remove		= vspm_isu_remove,
+};
+
 static int vspm_platform_driver_register(void)
 {
 	int ercd;
 
 	ercd = platform_driver_register(&vspm_vsp_driver);
 	if (ercd) {
-		APRINT("could not register a driver for ");
+		APRINT("could not register a driver for VSP");
 		APRINT("platform-level devices %d\n", ercd);
 		return ercd;
 	}
 
 	ercd = platform_driver_register(&vspm_fdp_driver);
 	if (ercd) {
-		APRINT("could not register a driver for ");
+		APRINT("could not register a driver for FDP");
 		APRINT("platform-level devices %d\n", ercd);
 		/* forced quit */
 		platform_driver_unregister(&vspm_vsp_driver);
+		return ercd;
+	}
+
+	ercd = platform_driver_register(&vspm_isu_driver);
+	if (ercd) {
+		APRINT("could not register a driver for ISU ");
+		APRINT("platform-level devices %d\n", ercd);
 		return ercd;
 	}
 
@@ -576,6 +671,7 @@ static void vspm_platform_driver_unregister(void)
 {
 	platform_driver_unregister(&vspm_vsp_driver);
 	platform_driver_unregister(&vspm_fdp_driver);
+	platform_driver_unregister(&vspm_isu_driver);
 }
 
 static int __init vspm_module_init(void)

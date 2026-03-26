@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -60,6 +60,7 @@
 
 #include "vsp_drv.h"
 #include "fdp_drv.h"
+#include "isu_drv.h"
 #include "vspm_cmn.h"
 
 /* callback function */

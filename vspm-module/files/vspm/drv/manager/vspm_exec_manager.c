@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -103,6 +103,10 @@ long vspm_ins_exec_start(
 		/* Start the FDP process */
 		ercd = vspm_ins_fdp_execute(
 			module_id, ip_par->par.fdp, request);
+	} else if (IS_ISU_CH(module_id)) {
+		/* Start the ISU process */
+		ercd = vspm_ins_isu_execute(
+			module_id, ip_par->par.isu);
 	} else {
 		EPRINT("%s Invalid module_id 0x%04x\n", __func__, module_id);
 		ercd = R_VSPM_NG;
@@ -135,6 +139,11 @@ long vspm_ins_exec_complete(
 	} else if (IS_FDP_CH(module_id)) {
 		/* FDP process complete */
 		ercd = vspm_ins_fdp_exec_complete(module_id);
+		if (ercd)
+			return R_VSPM_NG;
+	} else if (IS_ISU_CH(module_id)) {
+		/* ISU process complete */
+		ercd = vspm_ins_isu_exec_complete(module_id);
 		if (ercd)
 			return R_VSPM_NG;
 	} else {

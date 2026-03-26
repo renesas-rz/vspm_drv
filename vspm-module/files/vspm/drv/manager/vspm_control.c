@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -150,6 +150,7 @@ static unsigned short vspm_ins_ctrl_get_ch_msb(unsigned int bits)
  *	return of vspm_inc_sort_queue_initialize()
  *	return of vspm_ins_vsp_initialize()
  *	return of vspm_ins_fdp_initialize()
+ *	return of vspm_ins_isu_initialize()
  ******************************************************************************/
 long vspm_ins_ctrl_initialize(struct vspm_drvdata *pdrv)
 {
@@ -186,6 +187,15 @@ long vspm_ins_ctrl_initialize(struct vspm_drvdata *pdrv)
 		return ercd;
 	}
 
+	/* initialize ISU driver */
+	ercd = vspm_ins_isu_initialize(usable, pdrv);
+	if (ercd != R_VSPM_OK) {
+		EPRINT("failed to vspm_ins_isu_initialize %ld\n", ercd);
+		/* forced quit */
+		(void)vspm_ins_isu_quit(usable);
+		return ercd;
+	}
+
 	return R_VSPM_OK;
 }
 
@@ -212,6 +222,13 @@ long vspm_ins_ctrl_quit(struct vspm_drvdata *pdrv)
 	ercd = vspm_ins_fdp_quit(usable);
 	if (ercd != R_VSPM_OK) {
 		EPRINT("failed to vspm_ins_fdp_quit %ld\n", ercd);
+		return ercd;
+	}
+
+	/* Finalize ISU driver */
+	ercd = vspm_ins_isu_quit(usable);
+	if (ercd != R_VSPM_OK) {
+		EPRINT("failed to vspm_ins_isu_quit %ld\n", ercd);
 		return ercd;
 	}
 
@@ -378,6 +395,9 @@ long vspm_ins_ctrl_exec_entry(struct vspm_api_param_entry *entry)
 	} else if (request->type == VSPM_TYPE_FDP_AUTO) {
 		/* execute FDP processing */
 		ercd = vspm_ins_fdp_execute_low_delay(module_id, entry);
+	} else if (request->type == VSPM_TYPE_ISU_AUTO) {
+		/* execute ISU processing */
+		ercd = vspm_ins_isu_execute_low_delay(module_id, entry);
 	} else {
 		ercd = R_VSPM_NG;
 	}
@@ -596,6 +616,9 @@ long vspm_ins_ctrl_cancel_entry(struct vspm_privdata *priv)
 	} else if (request->type == VSPM_TYPE_FDP_AUTO) {
 		/* cancel FDP processing */
 		ercd = vspm_ins_fdp_cancel(module_id);
+	} else if (request->type == VSPM_TYPE_ISU_AUTO) {
+		/* cancel ISU processing */
+		ercd = vspm_ins_isu_cancel(module_id);
 	} else {
 		ercd = R_VSPM_NG;
 	}
@@ -627,6 +650,10 @@ long vspm_ins_ctrl_mode_param_check(
 		vspm_ins_mask_low_bits(&bits, VSPM_FDP_CH_NUM);
 		/* shift channel bits */
 		bits <<= VSPM_FDP_CH_OFFSET;
+	} else if (param->type == VSPM_TYPE_ISU_AUTO) {
+		vspm_ins_mask_low_bits(&bits, VSPM_ISU_CH_NUM);
+		/* shift channel bits */
+		bits <<= VSPM_ISU_CH_OFFSET;
 	} else {
 		EPRINT("%s: Invalid type!! type=%d\n",
 		       __func__, param->type);
@@ -714,6 +741,12 @@ long vspm_ins_ctrl_entry_param_check(struct vspm_api_param_entry *entry)
 	case VSPM_TYPE_FDP_AUTO:
 		if (!ip_par->par.fdp) {
 			EPRINT("%s par.fdp is NULL\n", __func__);
+			return R_VSPM_PARAERR;
+		}
+		break;
+	case VSPM_TYPE_ISU_AUTO:
+		if (!ip_par->par.isu) {
+			EPRINT("%s par.isu is NULL\n", __func__);
 			return R_VSPM_PARAERR;
 		}
 		break;
@@ -866,6 +899,13 @@ long vspm_ins_ctrl_assign_channel(
 		/* get channel from LSB */
 		ch_num = vspm_ins_ctrl_get_ch_lsb(assign_bits);
 		ch_num += VSPM_FDP_CH_OFFSET;
+	} else if (ip_par->type == VSPM_TYPE_ISU_AUTO) {
+		/* shift channel bits */
+		assign_bits >>= VSPM_ISU_CH_OFFSET;
+		/* bit mask */
+		vspm_ins_mask_low_bits(&assign_bits, VSPM_ISU_CH_NUM);
+		ch_num = vspm_ins_ctrl_get_ch_lsb(assign_bits);
+		ch_num += VSPM_ISU_CH_OFFSET;
 	}
 
 	/* check assignment channel number */

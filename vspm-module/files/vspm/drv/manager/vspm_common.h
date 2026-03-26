@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -253,4 +253,19 @@ long vspm_ins_fdp_execute_low_delay(
 long vspm_ins_fdp_suspend(void);
 long vspm_ins_fdp_resume(void);
 
+/* ISU control functions */
+long vspm_ins_isu_ch(unsigned short module_id, unsigned char *ch);
+long vspm_ins_isu_initialize(
+	struct vspm_usable_res_info *usable, struct vspm_drvdata *pdrv);
+long vspm_ins_isu_exec_complete(unsigned short module_id);
+long vspm_ins_isu_cancel(unsigned short module_id);
+long vspm_ins_isu_quit(struct vspm_usable_res_info *usable);
+long vspm_ins_isu_execute(
+	unsigned short module_id,
+	struct isu_start_t *isu_par);
+long vspm_ins_isu_execute_low_delay(
+	unsigned short module_id,
+	struct vspm_api_param_entry *entry);
+long vspm_ins_isu_suspend(void);
+long vspm_ins_isu_resume(void);
 #endif /* __VSPM_COMMON_H__ */

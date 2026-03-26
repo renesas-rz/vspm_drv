@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -70,6 +70,7 @@
 #define VSP_CLK_NAME		"vsp"
 #define FDP_CLK_NAME		"fdp"
 #define FCP_CLK_NAME		"fcp"
+#define ISU_CLK_NAME		"isu_aclk"
 #define CLKNUM				2
 
 /* vspm driver data structure */
@@ -78,6 +79,8 @@ struct vspm_drvdata {
 	struct clk *vsp_clks[VSPM_VSP_IP_MAX][CLKNUM];
 	struct platform_device *fdp_pdev[VSPM_FDP_IP_MAX];
 	struct clk *fdp_clks[VSPM_FDP_IP_MAX][CLKNUM];
+	struct platform_device *isu_pdev[VSPM_ISU_IP_MAX];
+	struct clk *isu_clks[VSPM_ISU_IP_MAX][CLKNUM];
 	struct task_struct *task;
 	atomic_t counter;
 	atomic_t suspend;

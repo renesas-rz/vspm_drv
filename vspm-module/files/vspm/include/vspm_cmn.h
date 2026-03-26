@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -89,7 +89,8 @@ enum {
 /* select IP */
 enum {
 	VSPM_TYPE_VSP_AUTO = 0,
-	VSPM_TYPE_FDP_AUTO
+	VSPM_TYPE_FDP_AUTO,
+	VSPM_TYPE_ISU_AUTO
 };
 
 /* Job priority */
@@ -128,6 +129,7 @@ struct vspm_init_t {
 	unsigned short type;
 	union {
 		struct vspm_init_vsp_t *vsp;
+		struct vspm_init_vsp_t *isu;
 		struct vspm_init_fdp_t *fdp;
 	} par;
 };
@@ -138,6 +140,7 @@ struct vspm_job_t {
 	union {
 		struct vsp_start_t *vsp;
 		struct fdp_start_t *fdp;
+		struct isu_start_t *isu;
 	} par;
 };
 

@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -69,26 +69,33 @@ enum {
 	VSPM_TYPE_FDP_CH0,
 	VSPM_TYPE_FDP_CH1,
 	VSPM_TYPE_FDP_CH2,
+	/* ISU channel */
+	VSPM_TYPE_ISU_CH0,
 	VSPM_CH_MAX
 };
 
 /* maximum IP number */
 #define VSPM_VSP_IP_MAX			(5)
 #define VSPM_FDP_IP_MAX			(3)
+#define VSPM_ISU_IP_MAX			(1)
 
 /* maximum channel number (per IP) */
 #define VSPM_VSP_CH_MAX			(1)
 #define VSPM_FDP_CH_MAX			(1)
+#define VSPM_ISU_CH_MAX			(1)
 
 /* total channel number */
 #define VSPM_VSP_CH_NUM \
 	(VSPM_VSP_IP_MAX * VSPM_VSP_CH_MAX)
 #define VSPM_FDP_CH_NUM \
 	(VSPM_FDP_IP_MAX * VSPM_FDP_CH_MAX)
+#define VSPM_ISU_CH_NUM \
+	(VSPM_ISU_IP_MAX * VSPM_ISU_CH_MAX)
 
 /* offset channel number */
 #define VSPM_VSP_CH_OFFSET		VSPM_TYPE_VSP_CH0
 #define VSPM_FDP_CH_OFFSET		VSPM_TYPE_FDP_CH0
+#define VSPM_ISU_CH_OFFSET		VSPM_TYPE_ISU_CH0
 
 /* judgment macro */
 #define IS_VSP_CH(ch) \
@@ -97,5 +104,8 @@ enum {
 #define IS_FDP_CH(ch) \
 	(((ch) >= VSPM_FDP_CH_OFFSET) && \
 	 ((ch) < (VSPM_FDP_CH_NUM + VSPM_FDP_CH_OFFSET)))
+#define IS_ISU_CH(ch) \
+	(((ch) >= VSPM_ISU_CH_OFFSET) && \
+	 ((ch) < (VSPM_ISU_CH_NUM + VSPM_ISU_CH_OFFSET)))
 
 #endif
