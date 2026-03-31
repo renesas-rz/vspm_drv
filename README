@@ -1,12 +1,14 @@
 VSP Manager
 =====
-VSP Manager controls VSP2, FDP1 and FCP on R-Car H3/M3.
+VSP Manager controls
+  - VSP, FDP and FCP on RZ/G2H, RZ/G2M, RZ/G2N, RZ/G2E and RZ/G3E
+  - ISU on RZ/G2L, RZ/V2L, RZ/V2H and RZ/V2N and RZ/G3L
 
 Package:
 --------
 The VSP Manager has the following softwares.
   * vspm_drv
-    - Controls the VSP2, FDP1 and FCP.
+    - Controls the VSP, FDP, FCP and ISU.
     - Automatic assignment of free RPF channels.
     - The VSP manager supports 2 modes.
       (Mutual mode or occupy mode).
