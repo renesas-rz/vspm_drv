@@ -65,6 +65,7 @@
 #include <linux/clk.h>
 #include <linux/reset.h>
 #include <linux/mfd/syscon.h>
+#include <linux/version.h>
 
 #include "vspm_public.h"
 #include "vspm_ip_ctrl.h"
@@ -378,7 +379,11 @@ static int vspm_vsp_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0))
 static int vspm_vsp_remove(struct platform_device *pdev)
+#else
+static void vspm_vsp_remove(struct platform_device *pdev)
+#endif
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
@@ -396,7 +401,9 @@ static int vspm_vsp_remove(struct platform_device *pdev)
 
 	memset(&pdrv->vsp_vdev[ch], 0, sizeof(struct vspm_device));
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0))
 	return 0;
+#endif
 }
 
 static int vspm_fdp_probe(struct platform_device *pdev)
@@ -473,7 +480,11 @@ static int vspm_fdp_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0))
 static int vspm_fdp_remove(struct platform_device *pdev)
+#else
+static void vspm_fdp_remove(struct platform_device *pdev)
+#endif
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
@@ -491,7 +502,9 @@ static int vspm_fdp_remove(struct platform_device *pdev)
 
 	memset(&pdrv->fdp_vdev[ch], 0, sizeof(struct vspm_device));
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0))
 	return 0;
+#endif
 }
 
 static int vspm_isu_probe(struct platform_device *pdev)
@@ -557,7 +570,11 @@ static int vspm_isu_probe(struct platform_device *pdev)
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0))
 static int vspm_isu_remove(struct platform_device *pdev)
+#else
+static void vspm_isu_remove(struct platform_device *pdev)
+#endif
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
@@ -575,7 +592,9 @@ static int vspm_isu_remove(struct platform_device *pdev)
 
 	memset(&pdrv->isu_vdev[ch], 0, sizeof(struct vspm_device));
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 11, 0))
 	return 0;
+#endif
 }
 
 static int vspm_pm_suspend(struct device *dev)
