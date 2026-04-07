@@ -1717,22 +1717,22 @@ long fdp_reg_inth(struct fdp_obj_t *obj)
 	int ercd;
 
 	/* get irq information from platform */
-	obj->irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!obj->irq) {
+	obj->irq = platform_get_irq(pdev, 0);
+	if (obj->irq < 0) {
 		EPRINT("%s: failed to get IRQ resource!!\n", __func__);
 		return E_FDP_DEF_INH;
 	}
 
 	/* registory interrupt handler */
 	ercd = request_irq(
-		obj->irq->start,
+		obj->irq,
 		fdp_ins_ih,
 		IRQF_SHARED,
 		dev_name(&pdev->dev),
 		obj);
 	if (ercd) {
 		EPRINT("%s: failed to request irq!! ercd=%d, irq=%d\n",
-		       __func__, ercd, (int)obj->irq->start);
+		       __func__, ercd, obj->irq);
 		return E_FDP_DEF_INH;
 	}
 
@@ -1747,9 +1747,9 @@ long fdp_reg_inth(struct fdp_obj_t *obj)
 long fdp_free_inth(struct fdp_obj_t *obj)
 {
 	/* registory interrupt handler */
-	if (obj->irq) {
-		free_irq(obj->irq->start, obj);
-		obj->irq = NULL;
+	if (obj->irq >= 0) {
+		free_irq(obj->irq, obj);
+		obj->irq = -1;
 	}
 
 	return 0;

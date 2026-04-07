@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -2783,23 +2783,22 @@ long vsp_ins_reg_ih(struct vsp_prv_data *prv)
 	int ercd;
 
 	/* get irq information from platform */
-	prv->irq = platform_get_resource(prv->pdev, IORESOURCE_IRQ, 0);
-	if (!prv->irq) {
+	prv->irq = platform_get_irq(prv->pdev, 0);
+	if (prv->irq < 0) {
 		EPRINT("%s: failed to get IRQ resource!!\n", __func__);
 		return E_VSP_DEF_INH;
 	}
 
 	/* registory interrupt handler */
 	ercd = request_irq(
-		prv->irq->start,
+		prv->irq,
 		vsp_ins_ih,
 		IRQF_SHARED,
 		dev_name(&prv->pdev->dev),
 		prv);
 	if (ercd) {
 		EPRINT("%s: failed to request irq!! ercd=%d, irq=%d\n",
-		       __func__, ercd, (int)prv->irq->start);
-		prv->irq = NULL;
+		       __func__, ercd, prv->irq);
 		return E_VSP_DEF_INH;
 	}
 
@@ -2814,9 +2813,9 @@ long vsp_ins_reg_ih(struct vsp_prv_data *prv)
 long vsp_ins_unreg_ih(struct vsp_prv_data *prv)
 {
 	/* release interrupt handler */
-	if (prv->irq) {
-		free_irq(prv->irq->start, prv);
-		prv->irq = NULL;
+	if (prv->irq >= 0) {
+		free_irq(prv->irq, prv);
+		prv->irq = -1;
 	}
 
 	return 0;

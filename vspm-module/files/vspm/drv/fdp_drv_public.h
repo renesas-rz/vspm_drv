@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -96,7 +96,7 @@ struct fdp_obj_t {
 
 	/* platform information */
 	struct platform_device *pdev;
-	struct resource *irq;
+	int irq;
 	void __iomem *fdp_reg;
 	void __iomem *fcp_reg;
 	unsigned int lut_tbl_idx;

@@ -241,7 +241,7 @@ struct isu_ch_info {
 struct isu_prv_data {
 	struct platform_device *pdev;
 	void __iomem *isu_reg;
-	struct resource *irq;
+	int irq;
 	struct isu_res_data {
 		unsigned int usable_rpf;
 		unsigned int usable_wpf;

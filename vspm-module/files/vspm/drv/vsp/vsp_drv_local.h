@@ -1,7 +1,7 @@
 /*************************************************************************/ /*
  * VSPM
  *
- * Copyright (C) 2015-2017 Renesas Electronics Corporation
+ * Copyright (C) 2015-2026 Renesas Electronics Corporation
  *
  * License        Dual MIT/GPLv2
  *
@@ -759,7 +759,7 @@ struct vsp_prv_data {
 	struct platform_device *pdev;
 	void __iomem *vsp_reg;
 	void __iomem *fcp_reg;
-	struct resource *irq;
+	int irq;
 	struct vsp_res_data {
 		unsigned int usable_rpf;
 		unsigned int usable_rpf_clut;
