@@ -1,4 +1,4 @@
-CFILES = vspm_main.c vspm_sub.c
+CFILES = vspm_main.c vspm_device.c vspm_sub.c
 CFILES += frame.c
 CFILES += manager/vspm_control.c manager/vspm_drv_vsp.c manager/vspm_drv_fdp.c manager/vspm_drv_isu.c manager/vspm_exec_manager.c
 CFILES += manager/vspm_job_manager.c manager/vspm_lib.c manager/vspm_sort_queue.c manager/vspm_task.c

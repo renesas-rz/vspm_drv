@@ -62,6 +62,8 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/pm_runtime.h>
+#include <linux/clk.h>
+#include <linux/reset.h>
 
 #include "vspm_public.h"
 #include "vspm_ip_ctrl.h"
@@ -295,10 +297,9 @@ static int vspm_vsp_probe(struct platform_device *pdev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
-	char *clk_names[CLKNUM] = {VSP_CLK_NAME, FCP_CLK_NAME};
-	struct clk *clk;
-
-	int i;
+	struct vspm_device *vdev = NULL;
+	const struct soc_device_attribute *attr = NULL;
+	int ret = -1;
 	int ch;
 
 	/* get channel */
@@ -318,21 +319,34 @@ static int vspm_vsp_probe(struct platform_device *pdev)
 		return -1;
 	}
 
-	/* set clocks */
-	for (i = 0; i < CLKNUM; i++) {
-		clk = devm_clk_get(&pdev->dev, clk_names[i]);
-		if (IS_ERR(clk)) {
-			APRINT("Cannot get %s clock!! ch=%d\n",
-			       clk_names[i], ch);
-			for (; i > 0; i--)
-				pdrv->vsp_clks[ch][i - 1] = NULL;
-			return -1;
-		}
-		pdrv->vsp_clks[ch][i] = clk;
+	vdev = &pdrv->vsp_vdev[ch];
+
+	/* clear all information */
+	memset(vdev, 0, sizeof(struct vspm_device));
+
+	attr = soc_device_match(vsp_config_attrs);
+	if (!attr) {
+		APRINT("No VSP specific config found!! ch=%d\n", ch);
+		return -1;
+	}
+	vdev->config = (struct vspm_device_config *)(attr->data);
+
+	/* get clocks */
+	ret = vspm_device_get_clks(pdev, vdev);
+	if (ret) {
+		APRINT("Failed to get clk array for VSP!! ch=%d\n", ch);
+		return -1;
+	}
+
+	/* get resets */
+	ret = vspm_device_get_rsts(pdev, vdev);
+	if (ret) {
+		APRINT("Failed to get rst array for VSP!! ch=%d\n", ch);
+		return -1;
 	}
 
 	/* set driver data */
-	platform_set_drvdata(pdev, &pdrv->vsp_clks[ch]);
+	platform_set_drvdata(pdev, vdev);
 	pdrv->vsp_pdev[ch] = pdev;
 
 	/* set runtime PM */
@@ -346,8 +360,6 @@ static int vspm_vsp_remove(struct platform_device *pdev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
-
-	int i;
 	int ch;
 
 	/* unset runtime PM */
@@ -360,9 +372,7 @@ static int vspm_vsp_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	pdrv->vsp_pdev[ch] = NULL;
 
-	/* unset clocks */
-	for (i = 0; i < CLKNUM; i++)
-		pdrv->vsp_clks[ch][i] = NULL;
+	memset(&pdrv->vsp_vdev[ch], 0, sizeof(struct vspm_device));
 
 	return 0;
 }
@@ -371,10 +381,9 @@ static int vspm_fdp_probe(struct platform_device *pdev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
-	char *clk_names[CLKNUM] = {FDP_CLK_NAME, FCP_CLK_NAME};
-	struct clk *clk;
-
-	int i;
+	struct vspm_device *vdev = NULL;
+	const struct soc_device_attribute *attr = NULL;
+	int ret = 0;
 	int ch;
 
 	/* get channel */
@@ -394,21 +403,34 @@ static int vspm_fdp_probe(struct platform_device *pdev)
 		return -1;
 	}
 
-	/* set clocks */
-	for (i = 0; i < CLKNUM; i++) {
-		clk = devm_clk_get(&pdev->dev, clk_names[i]);
-		if (IS_ERR(clk)) {
-			APRINT("Cannot get %s clock!! ch=%d\n",
-			       clk_names[i], ch);
-			for (; i > 0; i--)
-				pdrv->fdp_clks[ch][i - 1] = NULL;
-			return -1;
-		}
-		pdrv->fdp_clks[ch][i] = clk;
+	vdev = &pdrv->fdp_vdev[ch];
+
+	/* clear all information */
+	memset(vdev, 0, sizeof(struct vspm_device));
+
+	attr = soc_device_match(fdp_config_attrs);
+	if (!attr) {
+		APRINT("No FDP specific config found!! ch=%d\n", ch);
+		return -1;
+	}
+	vdev->config = (struct vspm_device_config *)(attr->data);
+
+	/* get clocks */
+	ret = vspm_device_get_clks(pdev, vdev);
+	if (ret) {
+		APRINT("Failed to get clk array for FDP!! ch=%d\n", ch);
+		return -1;
+	}
+
+	/* get resets */
+	ret = vspm_device_get_rsts(pdev, vdev);
+	if (ret) {
+		APRINT("Failed to get rst array for FDP!! ch=%d\n", ch);
+		return -1;
 	}
 
 	/* set driver data */
-	platform_set_drvdata(pdev, &pdrv->fdp_clks[ch]);
+	platform_set_drvdata(pdev, vdev);
 	pdrv->fdp_pdev[ch] = pdev;
 
 	/* set runtime PM */
@@ -422,8 +444,6 @@ static int vspm_fdp_remove(struct platform_device *pdev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
-
-	int i;
 	int ch;
 
 	/* unset runtime PM */
@@ -436,9 +456,7 @@ static int vspm_fdp_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	pdrv->fdp_pdev[ch] = NULL;
 
-	/* unset clocks */
-	for (i = 0; i < CLKNUM; i++)
-		pdrv->fdp_clks[ch][i] = NULL;
+	memset(&pdrv->fdp_vdev[ch], 0, sizeof(struct vspm_device));
 
 	return 0;
 }
@@ -447,7 +465,9 @@ static int vspm_isu_probe(struct platform_device *pdev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
-	struct clk *clk;
+	struct vspm_device *vdev = NULL;
+	const struct soc_device_attribute *attr = NULL;
+	int ret = 0;
 	int ch;
 
 	/* get channel */
@@ -467,17 +487,34 @@ static int vspm_isu_probe(struct platform_device *pdev)
 		return -1;
 	}
 
-	/* set clocks */
-	clk = devm_clk_get(&pdev->dev, ISU_CLK_NAME);
-	if (IS_ERR(clk)) {
-		APRINT("Cannot get %s clock!! ch=%d\n",ISU_CLK_NAME, ch);
+	vdev = &pdrv->isu_vdev[ch];
+
+	/* Clear all information */
+	memset(vdev, 0, sizeof(struct vspm_device));
+
+	attr = soc_device_match(isu_config_attrs);
+	if (!attr) {
+		APRINT("No ISU specific config found!! ch=%d\n", ch);
+		return -1;
+	}
+	vdev->config = (struct vspm_device_config *)(attr->data);
+
+	/* get clocks */
+	ret = vspm_device_get_clks(pdev, vdev);
+	if (ret) {
+		APRINT("Failed to get clk array for ISU!! ch=%d\n", ch);
 		return -1;
 	}
 
-	pdrv->isu_clks[ch][0] = clk;
+	/* get resets */
+	ret = vspm_device_get_rsts(pdev, vdev);
+	if (ret) {
+		APRINT("Failed to get rst array for ISU!! ch=%d\n", ch);
+		return -1;
+	}
 
 	/* set driver data */
-	platform_set_drvdata(pdev, &pdrv->isu_clks[ch]);
+	platform_set_drvdata(pdev, vdev);
 	pdrv->isu_pdev[ch] = pdev;
 
 	/* set runtime PM */
@@ -491,7 +528,6 @@ static int vspm_isu_remove(struct platform_device *pdev)
 {
 	struct vspm_drvdata *pdrv = p_vspm_drvdata;
 	struct device_node *np = pdev->dev.of_node;
-
 	int ch;
 
 	/* unset runtime PM */
@@ -504,8 +540,7 @@ static int vspm_isu_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 	pdrv->isu_pdev[ch] = NULL;
 
-	/* unset clocks */
-	pdrv->isu_clks[ch][0] = NULL;
+	memset(&pdrv->isu_vdev[ch], 0, sizeof(struct vspm_device));
 
 	return 0;
 }
@@ -545,13 +580,21 @@ static int vspm_pm_resume(struct device *dev)
 static int vspm_pm_runtime_suspend(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct clk **clk = platform_get_drvdata(pdev);
-
+	struct vspm_device *vdev = platform_get_drvdata(pdev);
+	int ret = -1;
 	int i;
 
-	for (i = 0; i < CLKNUM; i++) {
-		if (clk[i])
-			clk_disable_unprepare(clk[i]);
+	for (i = 0; i < vdev->num_rsts; i++) {
+		if (vdev->rsts[i]) {
+			ret = reset_control_assert(vdev->rsts[i]);
+			if (ret) {
+				EPRINT("%s: Fail to assert reset %d \n", __func__, i);
+			}
+		}
+	}
+	for (i = 0; i < vdev->num_clks; i++) {
+		if (vdev->clks[i])
+			clk_disable_unprepare(vdev->clks[i]);
 	}
 
 	return 0;
@@ -560,13 +603,25 @@ static int vspm_pm_runtime_suspend(struct device *dev)
 static int vspm_pm_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
-	struct clk **clk = platform_get_drvdata(pdev);
-
+	struct vspm_device *vdev = platform_get_drvdata(pdev);
+	int ret = -1;
 	int i;
 
-	for (i = 0; i < CLKNUM; i++) {
-		if (clk[i])
-			clk_prepare_enable(clk[i]);
+	for (i = 0; i < vdev->num_clks; i++) {
+		if (vdev->clks[i]) {
+			ret = clk_prepare_enable(vdev->clks[i]);
+			if (ret) {
+				EPRINT("%s: Fail to enable clock %d \n", __func__, i);
+			}
+		}
+	}
+	for (i = 0; i < vdev->num_rsts; i++) {
+		if (vdev->rsts[i]) {
+			ret = reset_control_deassert(vdev->rsts[i]);
+			if (ret) {
+				EPRINT("%s: Fail to deassert reset %d \n", __func__, i);
+			}
+		}
 	}
 
 	return 0;
