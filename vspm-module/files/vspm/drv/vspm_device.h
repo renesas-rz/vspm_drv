@@ -66,9 +66,42 @@
 #define VSPM_CLKNUM_MAX			3
 #define VSPM_RSTNUM_MAX			3
 
+/* Indicator for features on different SoC */
+#define ISU_FM_INT_EDGE			(BIT(0))
+#define ISU_RAW_FORMAT_EXTS		(BIT(1))
+
+struct vsp_hw_prv_info {
+	/* Reserved */
+};
+
+struct fdp_hw_prv_info {
+	/* Reserved */
+};
+
+/* ISU parameter specific limit information */
+struct isu_param_limit {
+	unsigned short width;
+	unsigned short height;
+	unsigned short crop_w;
+	unsigned short crop_h;
+	unsigned int x_scale;
+	unsigned int y_scale;
+};
+
+struct isu_hw_prv_info {
+	unsigned short features;
+	struct isu_param_limit min;
+	struct isu_param_limit max;
+};
+
 struct vspm_device_config {
 	const char *clk_names[VSPM_CLKNUM_MAX];
 	const char *rst_names[VSPM_CLKNUM_MAX];
+	union {
+		struct vsp_hw_prv_info vsp;
+		struct fdp_hw_prv_info fdp;
+		struct isu_hw_prv_info isu;
+	} hw_prv_info;
 };
 
 struct vspm_device {

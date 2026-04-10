@@ -597,29 +597,16 @@ static irqreturn_t isu_ins_ih(int irq, void *dev)
 	if (ch_info->status == ISU_STAT_RUN) {
 		/* read control register */
 		status = isu_read_reg(prv->isu_reg, ISU_FM_INT_STA);
-		if (!(ch_info->dl_info)) {
-			if ((status & ISU_INT_FREND) == ISU_INT_FREND) {
-				/* clear interrupt */
-				isu_write_reg(0, prv->isu_reg, ISU_FM_INT_STA);
 
-				/* dummy read */
-				isu_read_reg(prv->isu_reg, ISU_FM_INT_STA);
-				isu_read_reg(prv->isu_reg, ISU_FM_INT_STA);
+		/* clear interrupt */
+		isu_write_reg(0, prv->isu_reg, ISU_FM_INT_STA);
 
-				/* callback function */
-				isu_ins_cb_function(prv, R_VSPM_OK);
-			}
-		} else {
-			if ((status & ISU_INT_LISTERR) == ISU_INT_LISTERR) {
-				/* clear interrupt */
-				isu_write_reg(0, prv->isu_reg, ISU_FM_INT_STA);
-
-				/* callback function */
-				isu_ins_cb_function(prv, E_ISU_DL_FORMAT);
-			} else if ((status & ISU_INT_FREND) == ISU_INT_FREND) {
-				/* clear interrupt */
-				isu_write_reg(0, prv->isu_reg, ISU_FM_INT_STA);
-
+		if ((status & ISU_INT_LISTERRE) == ISU_INT_LISTERRE) {
+			/* callback function */
+			isu_ins_cb_function(prv, E_ISU_DL_FORMAT);
+		}
+		else {
+			if ((prv->hw->features & ISU_FM_INT_EDGE) || (status & ISU_INT_FRENDE)) {
 				/* dummy read */
 				isu_read_reg(prv->isu_reg, ISU_FM_INT_STA);
 				isu_read_reg(prv->isu_reg, ISU_FM_INT_STA);
@@ -681,3 +668,25 @@ long isu_ins_unreg_ih(struct isu_prv_data *prv)
 
 	return 0;
 }
+
+/******************************************************************************
+ * Function:		isu_ins_get_hw_prv_info
+ * Description:	Get Soc specified information
+ * Returns:		0/E_ISU_NO_INIT
+ ******************************************************************************/
+long isu_ins_get_hw_prv_info(struct isu_prv_data *prv)
+{
+	struct platform_device *pdev = prv->pdev;
+	struct vspm_device *vdev = platform_get_drvdata(pdev);
+
+	if (!vdev || !vdev->config) {
+		EPRINT("%s: Undefined SoC prv info!! ercd=%d\n",
+			__func__, E_ISU_NO_INIT);
+		return E_ISU_NO_INIT;
+	}
+
+	prv->hw = &vdev->config->hw_prv_info.isu;
+
+	return 0;
+}
+

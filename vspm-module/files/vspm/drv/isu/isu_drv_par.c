@@ -105,9 +105,10 @@ long isu_ins_check_open_parameter(struct isu_open_t *param)
  *	E_ISU_PARA_IN_FORMAT/E_ISU_PARA_IN_WIDTH/E_ISU_PARA_IN_HEIGHT
  *	E_ISU_PARA_ALPHA_ASEL
 ******************************************************************************/
-static long isu_ins_check_rpf_param(struct isu_ch_info *ch_info,
+static long isu_ins_check_rpf_param(struct isu_prv_data *prv,
 	struct isu_src_t *src_par)
 {
+	struct isu_ch_info *ch_info = &prv->ch_info;
 	struct isu_rpf_info *rpf_info = &ch_info->rpf_info;
 	unsigned char grada_mode_tmp;
 	char fmt_yuv=0;
@@ -137,6 +138,14 @@ static long isu_ins_check_rpf_param(struct isu_ch_info *ch_info,
 	case ISU_RAW8:
 	case ISU_RAW10:
 	case ISU_RAW12:
+		break;
+	case ISU_RAW14:
+	case ISU_RAW16:
+	case ISU_RAW20:
+	case ISU_RAW6:
+	case ISU_RAW7:
+		if (!(prv->hw->features & ISU_RAW_FORMAT_EXTS))
+			return E_ISU_PARA_IN_FORMAT;
 		break;
 	case ISU_YUV422_UYVY:
 	case ISU_YUV422_YUY2:
@@ -180,14 +189,18 @@ static long isu_ins_check_rpf_param(struct isu_ch_info *ch_info,
 	rpf_info->swap = (unsigned int)(src_par->swap);
 
 	/* check basic area */
-	if ((src_par->width < 1) || (src_par->width > 2800) || ((fmt_yuv) && (src_par->width % 2))) {
+	if ((src_par->width < prv->hw->min.width) ||
+		(src_par->width > prv->hw->max.width) ||
+		((fmt_yuv) && (src_par->width % 2))) {
 		return E_ISU_PARA_IN_WIDTH;
 	}
 	else {
 		rpf_info->width = src_par->width;
 	}
 
-	if ((src_par->height < 1) || (src_par->height > 2047) || ((fmt_yuv) && (src_par->height % 2))) {
+	if ((src_par->height < prv->hw->min.height) ||
+		(src_par->height > prv->hw->max.height) ||
+		((fmt_yuv) && (src_par->height % 2))) {
 		return E_ISU_PARA_IN_HEIGHT;
 	}
 	else {
@@ -223,9 +236,10 @@ static long isu_ins_check_rpf_param(struct isu_ch_info *ch_info,
  *	E_ISU_PARA_RS_CROP_WIDTH/E_ISU_PARA_RS_CROP_HEIGHT/
  *	E_ISU_PARA_RS_PAD/E_ISU_PARA_RS_RATIO/
  ******************************************************************************/
-static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
+static long isu_ins_check_rs_param(struct isu_prv_data *prv,
 	struct isu_rs_t *rs_param, struct isu_dst_t *dst_par)
 {
+	struct isu_ch_info *ch_info = &prv->ch_info;
 	struct isu_rpf_info *rpf_info = &ch_info->rpf_info;
 	struct isu_rs_info *rs_info = &ch_info->rs_info;
 
@@ -249,7 +263,8 @@ static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
 		}
 
 		/* Check output size */
-		if ((rs_param->crop_w < 1) || (rs_param->crop_w > 1920)) {
+		if ((rs_param->crop_w < prv->hw->min.crop_w) ||
+			(rs_param->crop_w > prv->hw->max.crop_w)) {
 			return E_ISU_PARA_RS_CROP_WIDTH;
 		}
 		else if ((dst_par->format ==
@@ -267,7 +282,8 @@ static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
 			rs_info->crop_w = rs_param->crop_w;
 		}
 
-		if ((rs_param->crop_h < 1) || (rs_param->crop_h > 1080)) {
+		if ((rs_param->crop_h < prv->hw->min.crop_h) ||
+			(rs_param->crop_h > prv->hw->max.crop_h)) {
 			return E_ISU_PARA_RS_CROP_HEIGHT;
 		}
 		else if ((dst_par->format ==
@@ -295,13 +311,22 @@ static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
 			return E_ISU_PARA_RS_PAD;
 		}
 		/* Check ratio scale */
-		if ((rs_param->x_ratio & 0x0000F000) && (rs_param->y_ratio & 0x0000F000)) {
-			rs_info->x_scale = (rs_param->x_ratio >> 12) << 16;
-			rs_info->x_scale |= (rs_param->x_ratio & 0x00000FFF);
-			rs_info->y_scale = (rs_param->y_ratio >> 12) << 16;
-			rs_info->y_scale |= (rs_param->y_ratio & 0x00000FFF);
-		} else {
+		if ((rs_param->x_ratio < prv->hw->min.x_scale) ||
+			(rs_param->x_ratio > prv->hw->max.x_scale)) {
 			return E_ISU_PARA_RS_RATIO;
+		}
+		else {
+			rs_info->x_scale = (rs_param->x_ratio & ISU_RS_SCALE_MANT) << 4;
+			rs_info->x_scale |= (rs_param->x_ratio & ISU_RS_SCALE_FRAC);
+		}
+
+		if ((rs_param->y_ratio < prv->hw->min.y_scale) ||
+			(rs_param->y_ratio > prv->hw->max.y_scale)) {
+			return E_ISU_PARA_RS_RATIO;
+		}
+		else {
+			rs_info->y_scale = (rs_param->y_ratio & ISU_RS_SCALE_MANT) << 4;
+			rs_info->y_scale |= (rs_param->y_ratio & ISU_RS_SCALE_FRAC);
 		}
 	} else {
 		rs_info->start_x = 0;
@@ -309,7 +334,8 @@ static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
 		rs_info->tune_x = 0;
 		rs_info->tune_y = 0;
 
-		if ((rpf_info->width < 1) || (rpf_info->width > 1920)) {
+		if ((rpf_info->width < prv->hw->min.crop_w) ||
+			(rpf_info->width > prv->hw->max.crop_w)) {
 			return E_ISU_PARA_RS_CROP_WIDTH;
 		}
 		else if ((dst_par->format ==
@@ -327,7 +353,8 @@ static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
 			rs_info->crop_w = rpf_info->width;
 		}
 
-		if ((rpf_info->height < 1) || (rpf_info->height > 1080)) {
+		if ((rpf_info->height < prv->hw->min.crop_h) ||
+			(rpf_info->height > prv->hw->max.crop_h)) {
 			return E_ISU_PARA_RS_CROP_HEIGHT;
 		}
 		else if ((dst_par->format ==
@@ -364,17 +391,16 @@ static long isu_ins_check_rs_param(struct isu_ch_info *ch_info,
 static long isu_ins_check_connection_module_from_rpf(struct isu_prv_data *prv,
 	struct isu_start_t *param)
 {
-	struct isu_ch_info *ch_info = &prv->ch_info;
 	long ercd;
 
 	/* check RPF parameter */
 	if (!(param->dl_hard_addr)) {
-		ercd = isu_ins_check_rpf_param(ch_info, param->src_par);
+		ercd = isu_ins_check_rpf_param(prv, param->src_par);
 		if (ercd)
 			return ercd;
 
 		/* check module parameter */
-		ercd = isu_ins_check_rs_param(ch_info, param->rs_par, param->dst_par);
+		ercd = isu_ins_check_rs_param(prv, param->rs_par, param->dst_par);
 		if (ercd)
 			return ercd;
 	}
@@ -388,9 +414,10 @@ static long isu_ins_check_connection_module_from_rpf(struct isu_prv_data *prv,
  * Returns:		0/E_ISU_PARA_NOOUT/E_ISU_PARA_OUT_ADDR/
  *	E_ISU_PARA_OUT_STRD/E_ISU_PARA_ALPHA_ASEL
  ******************************************************************************/
-static long isu_ins_check_wpf_param( struct isu_ch_info *ch_info,
+static long isu_ins_check_wpf_param(struct isu_prv_data *prv,
 	struct isu_dst_t *dst_par)
 {
+	struct isu_ch_info *ch_info = &prv->ch_info;
 	struct isu_wpf_info *wpf_info = &ch_info->wpf_info;
 	unsigned char i, j;
 
@@ -419,6 +446,15 @@ static long isu_ins_check_wpf_param( struct isu_ch_info *ch_info,
 	case ISU_RAW8:
 	case ISU_RAW10:
 	case ISU_RAW12:
+		break;
+	case ISU_RAW14:
+	case ISU_RAW16:
+	case ISU_RAW20:
+	case ISU_RAW6:
+	case ISU_RAW7:
+		if (!(prv->hw->features & ISU_RAW_FORMAT_EXTS))
+			return E_ISU_PARA_OUT_FORMAT;
+		break;
 	case ISU_YUV422_UYVY:
 	case ISU_YUV422_YUY2:
 		break;
@@ -528,13 +564,14 @@ static long isu_ins_check_dl_param(struct isu_ch_info *ch_info,
  *	Return of isu_ins_check_dl_param()
  ******************************************************************************/
 static long isu_ins_check_output_module(
-	struct isu_ch_info *ch_info, struct isu_start_t *param)
+	struct isu_prv_data *prv, struct isu_start_t *param)
 {
+	struct isu_ch_info *ch_info = &prv->ch_info;
 	long ercd;
 
 	/* check WPF parameter */
 	if (!(param->dl_hard_addr)) {
-		ercd = isu_ins_check_wpf_param(ch_info, param->dst_par);
+		ercd = isu_ins_check_wpf_param(prv, param->dst_par);
 		if (ercd)
 			return ercd;
 	} else {
@@ -557,11 +594,10 @@ static long isu_ins_check_output_module(
 long isu_ins_check_start_parameter(struct isu_prv_data *prv,
 	struct isu_start_t *param)
 {
-	struct isu_ch_info *ch_info = &prv->ch_info;
 	long ercd;
 
 	/* check WPF module parameter */
-	ercd = isu_ins_check_output_module(ch_info, param);
+	ercd = isu_ins_check_output_module(prv, param);
 	if (ercd)
 		return ercd;
 

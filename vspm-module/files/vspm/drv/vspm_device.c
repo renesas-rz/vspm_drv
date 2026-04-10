@@ -88,10 +88,84 @@ const struct vspm_device_config r9a09g047_fdp_config =
 	.rst_names = { "brdg_resetn", "fdp1_resetn", "fcpf1_resetp" },
 };
 
-/* RZ/G2L Series, RZ/V2L, RZ/V2H, RZ/V2N and RZ/G3L */
-const struct vspm_device_config isu_config =
+/* RZ/G2L Series and RZ/V2L */
+const struct vspm_device_config r9a07g044_isu_config =
 {
 	VSPM_DEVICE_ISU_COMMON_CONFIG,
+	.hw_prv_info = {
+		.isu = {
+			.min = {
+				.width   = 1,
+				.height  = 1,
+				.crop_w  = 1,
+				.crop_h  = 1,
+				.x_scale = 0x1000,
+				.y_scale = 0x1000,
+			},
+			.max = {
+				.width   = 2800,
+				.height  = 2047,
+				.crop_w  = 1920,
+				.crop_h  = 1080,
+				.x_scale = 0xFFFF,
+				.y_scale = 0xFFFF,
+			},
+		},
+	},
+};
+
+/* RZ/G3L */
+const struct vspm_device_config r9a08g046_isu_config =
+{
+	VSPM_DEVICE_ISU_COMMON_CONFIG,
+	.hw_prv_info = {
+		.isu = {
+			.features = ISU_FM_INT_EDGE | ISU_RAW_FORMAT_EXTS,
+			.min = {
+				.width   = 1,
+				.height  = 1,
+				.crop_w  = 1,
+				.crop_h  = 1,
+				.x_scale = 0x800,
+				.y_scale = 0x800,
+			},
+			.max = {
+				.width   = 2048,
+				.height  = 2048,
+				.crop_w  = 2048,
+				.crop_h  = 2048,
+				.x_scale = 0xFFFF,
+				.y_scale = 0xFFFF,
+			},
+		},
+	},
+};
+
+/* RZ/V2H and RZ/V2N */
+const struct vspm_device_config r9a09g056_isu_config =
+{
+	VSPM_DEVICE_ISU_COMMON_CONFIG,
+	.hw_prv_info = {
+		.isu = {
+			.features = ISU_FM_INT_EDGE | ISU_RAW_FORMAT_EXTS,
+			.min = {
+				.width   = 1,
+				.height  = 1,
+				.crop_w  = 1,
+				.crop_h  = 1,
+				.x_scale = 0x1000,
+				.y_scale = 0x1000,
+			},
+			.max = {
+				.width   = 4096,
+				.height  = 4096,
+				.crop_w  = 4096,
+				.crop_h  = 4096,
+				.x_scale = 0xFFFF,
+				.y_scale = 0xFFFF,
+			},
+		},
+	},
 };
 
 const struct soc_device_attribute vsp_config_attrs[] = {
@@ -107,11 +181,11 @@ const struct soc_device_attribute fdp_config_attrs[] = {
 };
 
 const struct soc_device_attribute isu_config_attrs[] = {
-	{ .soc_id = "r9a07g044", .data = &isu_config },
-	{ .soc_id = "r9a07g054", .data = &isu_config },
-	{ .soc_id = "r9a08g046", .data = &isu_config },
-	{ .soc_id = "r9a09g056", .data = &isu_config },
-	{ .soc_id = "r9a09g057", .data = &isu_config },
+	{ .soc_id = "r9a07g044", .data = &r9a07g044_isu_config },
+	{ .soc_id = "r9a07g054", .data = &r9a07g044_isu_config },
+	{ .soc_id = "r9a08g046", .data = &r9a08g046_isu_config },
+	{ .soc_id = "r9a09g056", .data = &r9a09g056_isu_config },
+	{ .soc_id = "r9a09g057", .data = &r9a09g056_isu_config },
 	/* sentinel */
 };
 

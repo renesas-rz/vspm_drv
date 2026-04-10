@@ -57,6 +57,9 @@
 
 #ifndef __ISU_DRV_PHY_H__
 #define __ISU_DRV_PHY_H__
+
+#include "isu_drv_public.h"
+
 /* define register offset */
 /* System Management Register offset address*/
 #define ISU_FM_DL_STADDH		(0x0000)	/* FM Descriptor List Address Registers 0 */
@@ -65,8 +68,10 @@
 #define ISU_FM_STOP				(0x000C)	/* FM Module Stop Registers */
 #define ISU_FM_INT_EN			(0x0010)	/* FM Interrupt Enable Registers */
 #define ISU_FM_INT_STA			(0x0014)	/* FM Interrupt Status Registers */
+#define ISU_FM_INT_FREC			(0x0018)	/* FM Frame End Interrupt Control Registers */
 #define ISU_AXI_ERAC			(0x0020)	/* AXI Error Action Registers */
 #define ISU_AXI_FIFO_CAP		(0x002C)	/* AXI FIFO Capability Registers */
+#define ISU_OTH_ID				(0x00F0)	/* ID Register */
 
 /* Common Register
 Sets input/ouput, reduction ratio and color conversion coefficient
@@ -138,6 +143,8 @@ Sets input/ouput, reduction ratio and color conversion coefficient
 #define ISU_RPF_AEXT			(0x00010000)
 #define ISU_RS_PADSEL			(0x00000001)
 #define ISU_RS_NO_RESIZE		(0x00010000)
+#define ISU_RS_SCALE_MANT		(0x0000F000)
+#define ISU_RS_SCALE_FRAC		(0x00000FFF)
 #define ISU_RPF_UV_CONV			(0x00000001)
 #define ISU_WPF_ASEL			(0x00010000)
 #define ISU_WPF_CCOL_SEL		(0x00000002)
@@ -242,6 +249,7 @@ struct isu_prv_data {
 		bool burst_enable;
 	} rdata;
 
+	const struct isu_hw_prv_info *hw;
 	struct isu_ch_info ch_info;
 };
 
@@ -268,5 +276,7 @@ void isu_ins_cb_function(struct isu_prv_data *prv, long ercd);
 
 long isu_ins_reg_ih(struct isu_prv_data *prv);
 long isu_ins_unreg_ih(struct isu_prv_data *prv);
+
+long isu_ins_get_hw_prv_info(struct isu_prv_data *prv);
 
 #endif

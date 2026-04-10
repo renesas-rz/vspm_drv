@@ -204,6 +204,11 @@ long isu_lib_open(unsigned char ch, struct isu_open_t *param)
 	if (ercd)
 		goto err_exit2;
 
+	/* get SoC specifed information */
+	ercd = isu_ins_get_hw_prv_info(prv);
+	if (ercd)
+		goto err_exit2;
+
 	/* registory interrupt handler */
 	ercd = isu_ins_reg_ih(prv);
 	if (ercd)
