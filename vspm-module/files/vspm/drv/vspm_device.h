@@ -69,6 +69,7 @@
 
 /* Indicator for require features on devices ops */
 #define VSPM_DT_SYSCON_CPG		(BIT(0))
+#define VSPM_DT_SYSCON_SYSC		(BIT(1))
 
 /* Indicator for features on different SoC */
 #define ISU_FM_INT_EDGE			(BIT(0))
@@ -122,6 +123,7 @@ struct vspm_device {
 	int num_rsts;
 	const struct vspm_device_config *config;
 	struct regmap *syscon_cpg;
+	struct regmap *syscon_sysc;
 };
 
 int vspm_device_get_clks(struct platform_device *pdev, struct vspm_device *vdev);
@@ -131,6 +133,7 @@ extern const struct soc_device_attribute vsp_config_attrs[];
 extern const struct soc_device_attribute fdp_config_attrs[];
 extern const struct soc_device_attribute isu_config_attrs[];
 
+extern const struct vspm_device_ops r9a09g047_vsp_ops;
 extern const struct vspm_device_ops r9a09g047_fdp_ops;
 
 #endif /* __VSPM_DEVICE_H__ */

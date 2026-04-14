@@ -300,6 +300,7 @@ static int vspm_vsp_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct vspm_device *vdev = NULL;
 	const struct soc_device_attribute *attr = NULL;
+	struct regmap *syscon = NULL;
 	int ret = -1;
 	int ch;
 
@@ -344,6 +345,26 @@ static int vspm_vsp_probe(struct platform_device *pdev)
 	if (ret) {
 		APRINT("Failed to get rst array for VSP!! ch=%d\n", ch);
 		return -1;
+	}
+
+	if ((vdev->config->ops) &&
+		(vdev->config->ops->require_features & VSPM_DT_SYSCON_CPG)) {
+		syscon = syscon_regmap_lookup_by_phandle(np, "renesas,syscon-cpg");
+		if (IS_ERR(syscon)) {
+			EPRINT("failed to get syscon regmap for CPG\n");
+			return -1;
+		}
+		vdev->syscon_cpg = syscon;
+	}
+
+	if ((vdev->config->ops) &&
+		(vdev->config->ops->require_features & VSPM_DT_SYSCON_SYSC)) {
+		syscon = syscon_regmap_lookup_by_phandle(np, "renesas,syscon-sysc");
+		if (IS_ERR(syscon)) {
+			EPRINT("failed to get syscon regmap for SYSC\n");
+			return -1;
+		}
+		vdev->syscon_sysc = syscon;
 	}
 
 	/* set driver data */

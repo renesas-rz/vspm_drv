@@ -64,7 +64,7 @@
 #define STATUS_LOOP_TIME			(2)
 #define STATUS_LOOP_CNT				(500)
 
-/* define low-power-consumption sequence control register offset */
+/* define low-power-consumption sequence control register offset for FDP */
 #define CPG_LP_FDP1_CTL				(0x0CA4)
 #define CPG_LP_FDP1_PWRREQ			(BIT(16) | BIT(28))
 #define CPG_LP_FDP1_PWRACC			(BIT(17) | BIT(29))
@@ -74,6 +74,28 @@
 #define CPG_LP_FDP1_CLKACC_S		(BIT(1) | BIT(9) | BIT(21))
 #define CPG_LP_FDP1_CLKACC_M		(BIT(5) | BIT(13) | BIT(25))
 #define CPG_LP_FDP1_CLKACC			(CPG_LP_FDP1_CLKACC_S | CPG_LP_FDP1_CLKACC_M)
+
+
+/* define low-power-comsumption requence control register offset for VSP */
+#define CPG_LP_VSP_CTL1				(0x0C9C)
+#define CPG_LP_VSP_CTL2				(0x0CA0)
+#define CPG_VSP_LPC1_CLKQREQ_S		(BIT(0) | BIT(8) | BIT(24))
+#define CPG_VSP_LPC1_CLKQREQ_M		(BIT(4) | BIT(12) | BIT(20))
+#define CPG_VSP_LPC1_PWRDQREQ		(BIT(16))
+#define CPG_VSP_LPC1_CLKQREQ		(CPG_VSP_LPC1_CLKQREQ_S | CPG_VSP_LPC1_CLKQREQ_M)
+#define CPG_VSP_LPC1_CLKACC_S		(BIT(1))
+#define CPG_VSP_LPC1_CLKACC_M		(BIT(5))
+#define CPG_VSP_LPC1_PWRDACC		(BIT(17))
+#define CPG_VSP_LPC1_CLKACC			(CPG_VSP_LPC1_CLKACC_S | CPG_VSP_LPC1_CLKACC_M)
+#define CPG_VSP_LPC2_PWRDQREQ		(BIT(0))
+#define CPG_VSP_LPC2_PWRDACC		(BIT(1))
+
+/* define SYSC offset */
+#define SYS_VSPI_CLK				(0x0E00)
+#define SYS_VSP_CLK_MSTP			(0x00000002)
+#define SYS_VSP_CLK_MON				(0x00000001)
+#define SYS_VSP_CLK_ALL				(SYS_VSP_CLK_MSTP | SYS_VSP_CLK_MON)
+
 
 static int syscon_set_sync(struct regmap *syscon, unsigned int offset, unsigned int value, unsigned int check, int mask)
 {
@@ -287,8 +309,247 @@ err1:
 	return ercd;
 }
 
+static int vsp_enable_clk_divider(struct vspm_device *vdev)
+{
+	return syscon_set_sync(vdev->syscon_sysc, SYS_VSPI_CLK, SYS_VSP_CLK_MSTP,
+							SYS_VSP_CLK_MON, SYS_VSP_CLK_MON);
+}
+
+static int vsp_disable_clk_divider(struct vspm_device *vdev)
+{
+	unsigned int	reg_data	= 0;
+
+	regmap_read(vdev->syscon_sysc, SYS_VSPI_CLK, &reg_data);
+	if (reg_data & SYS_VSP_CLK_ALL) {
+		reg_data &= ~SYS_VSP_CLK_MSTP;
+		return syscon_set_sync(vdev->syscon_sysc, SYS_VSPI_CLK, reg_data,
+								SYS_VSP_CLK_MON, SYS_VSP_CLK_MON);
+	}
+	return 0;
+}
+
+static int vsp_reset_assert(struct vspm_device *vdev)
+{
+	int	i		= 0;
+	int	loopcnt	= 0;
+
+	if (!vdev)
+		return -EINVAL;
+
+	for (i = (vdev->num_rsts - 1); i > 0; i--) {
+		if (reset_control_assert(vdev->rsts[i])) {
+			EPRINT("%s: failed to assert resets!! \n", __func__);
+			return -EAGAIN;
+		}
+		/* waiting assert process */
+		loopcnt = STATUS_LOOP_CNT;
+		do {
+			/* sleep */
+			msleep(STATUS_LOOP_TIME);
+		} while ((!reset_control_status(vdev->rsts[i])) &&
+				(--loopcnt > 0));
+
+		if (loopcnt == 0) {
+			EPRINT("%s: happen to timeout after assert resets!! \n", __func__);
+			return -EAGAIN;
+		}
+		if (!strcmp(vdev->config->rst_names[i], "smreset_vspiss")) {
+			/* disable clock divider after asserting vsp1z and fcpvi0 resets */
+			if (vsp_disable_clk_divider(vdev))
+				return -EAGAIN;
+		}
+	}
+	return 0;
+}
+
+static int vsp_reset_deassert(struct vspm_device *vdev)
+{
+	int	i		= 0;
+	int	loopcnt	= 0;
+
+	if (!vdev)
+		return -EINVAL;
+
+	for (i = 0; i < vdev->num_rsts; i++) {
+		if (reset_control_deassert(vdev->rsts[i])) {
+			EPRINT("%s: failed to deassert resets!! \n", __func__);
+			return -EAGAIN;
+		}
+		/* waiting deassert process */
+		loopcnt = STATUS_LOOP_CNT;
+		do {
+			/* sleep */
+			msleep(STATUS_LOOP_TIME);
+		} while ((reset_control_status(vdev->rsts[i])) &&
+				(--loopcnt > 0));
+		if (loopcnt == 0) {
+			EPRINT("%s: happen to timeout after deassert resets!! \n", __func__);
+			return -EAGAIN;
+		}
+		if (!strcmp(vdev->config->rst_names[i], "smreset_vspiss")) {
+			/* enable clock divider after deasserting vsp1z and fcpvi0 resets */
+			if (vsp_enable_clk_divider(vdev))
+				return -EAGAIN;
+		}
+	}
+	return 0;
+}
+
+static int r9a09g047_vsp_power_on(struct device *dev)
+{
+	struct platform_device	*pdev		= to_platform_device(dev);
+	struct vspm_device		*vdev		= platform_get_drvdata(pdev);
+	int 					ercd		= -EAGAIN;
+	unsigned int			reg_data	= 0;
+
+	if (!vdev || !vdev->syscon_cpg || !vdev->syscon_sysc)
+		return -EINVAL;
+
+	/* A1. activate clocks for VSP from CPG */
+	ercd = clock_enable(vdev);
+	if (ercd) {
+		EPRINT("%s: Cannot enable clock: %d\n", __func__, ercd);
+		return ercd;
+	}
+
+	/* A2. De-assert the reset signal for clock divider from CPG
+	 * A3-A4. De-assert module stop for clock divider (done in vsp_reset_deassert)
+	 * A5. De-assert reset signals for VSPI and FCPVI */
+	ercd = vsp_reset_deassert(vdev);
+	if (ercd) {
+		EPRINT("%s: Cannot deassert reset: %d\n", __func__, ercd);
+		goto err1;
+	}
+
+	/* A6. Release the low-power state of ADB400
+	 * A7. Confirm that ADB400 have leaved from the low-power state */
+	regmap_read(vdev->syscon_cpg, CPG_LP_VSP_CTL1, &reg_data);
+	reg_data |= CPG_VSP_LPC1_CLKQREQ; /* Keep others supply request bit */
+	ercd = syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL1,
+							reg_data,
+							CPG_VSP_LPC1_CLKACC, CPG_VSP_LPC1_CLKACC);
+	if (ercd) {
+		goto err2;
+	}
+
+	/* A8. Release the low-power state of the APB-IF
+	 * A9. Confirm that APB-IF have leaved from the low-power state */
+	regmap_read(vdev->syscon_cpg, CPG_LP_VSP_CTL1, &reg_data);
+	reg_data |= CPG_VSP_LPC1_PWRDQREQ; /* Keep others supply request bit */
+	ercd = syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL1,
+							reg_data,
+							CPG_VSP_LPC1_PWRDACC, CPG_VSP_LPC1_PWRDACC);
+	if (ercd) {
+		goto err2;
+	}
+
+	regmap_read(vdev->syscon_cpg, CPG_LP_VSP_CTL2, &reg_data);
+	reg_data |= CPG_VSP_LPC2_PWRDQREQ; /* Keep others supply request bit */
+	ercd = syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL2,
+							CPG_VSP_LPC2_PWRDQREQ,
+							CPG_VSP_LPC2_PWRDACC, CPG_VSP_LPC2_PWRDACC);
+	if (ercd) {
+		goto err2;
+	}
+	return 0;
+err2:
+	EPRINT("%s: Cannot release lower power state: %d\n", __func__, ercd);
+	syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL1,
+					(unsigned int)~(CPG_VSP_LPC1_CLKQREQ | CPG_VSP_LPC1_PWRDQREQ),
+					0, 0);
+	syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL2,
+					(unsigned int)(~CPG_VSP_LPC1_PWRDQREQ),
+					0, 0);
+	vsp_reset_assert(vdev);
+err1:
+	clock_disable(vdev);
+	return ercd;
+}
+
+static int r9a09g047_vsp_power_off(struct device *dev)
+{
+	struct platform_device	*pdev		= to_platform_device(dev);
+	struct vspm_device		*vdev		= platform_get_drvdata(pdev);
+	unsigned int			reg_data	= 0;
+	int						ercd		= -EAGAIN;
+
+	if (!vdev || !vdev->syscon_cpg || !vdev->syscon_sysc)
+		return -EINVAL;
+
+	/* B1. Make the APB-IF to the low-power state
+	 * B2. Confirm that APB-IF have been in the low-power state */
+	regmap_read(vdev->syscon_cpg, CPG_LP_VSP_CTL2, &reg_data);
+	reg_data &= ~CPG_VSP_LPC2_PWRDQREQ;
+	ercd = syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL2,
+							reg_data,
+							0, CPG_VSP_LPC2_PWRDACC);
+	if (ercd) {
+		EPRINT("%s: Cannot make low power state: %d\n",__func__, ercd);
+		return ercd;
+	}
+
+	regmap_read(vdev->syscon_cpg, CPG_LP_VSP_CTL1, &reg_data);
+	reg_data &= ~CPG_VSP_LPC1_PWRDQREQ;
+	ercd = syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL2,
+							reg_data,
+							0, CPG_VSP_LPC1_PWRDACC);
+	if (ercd) {
+		EPRINT("%s: Cannot make low power state: %d\n",__func__, ercd);
+		goto err1;
+	}
+
+	/* B3. Make the ADB400 to the low-power state
+	 * B4. Confirm that ADB400 have been in the low-power state */
+	regmap_read(vdev->syscon_cpg, CPG_LP_VSP_CTL1, &reg_data);
+	reg_data &= ~CPG_VSP_LPC1_CLKQREQ;
+	ercd = syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL2,
+							reg_data,
+							0, 0);
+	if (ercd) {
+		EPRINT("%s: Cannot make low power state: %d\n",__func__, ercd);
+		goto err1;
+	}
+
+	/* B5. Assert reset signals for VSPI and FCPVI *
+	 * B6. Assert module stop signal for clock divider from SYS
+	 * B7. Confirm that clock divider have stopped
+	 * B8. Assert the reset signal for clock divider from CPG */
+	ercd = reset_assert(vdev);
+	if (ercd) {
+		EPRINT("%s: Cannot assert reset: %d\n",__func__, ercd);
+		goto err1;
+	}
+
+	/* B9. Stop clocks for VSP from CPG */
+	ercd = clock_disable(vdev);
+	if (ercd) {
+		EPRINT("%s: Cannot disable clock: %d\n",__func__, ercd);
+		goto err2;
+	}
+	return 0;
+err2:
+	reset_deassert(vdev);
+err1:
+	syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL1,
+					CPG_VSP_LPC1_CLKQREQ,
+					CPG_VSP_LPC1_CLKACC, CPG_VSP_LPC1_CLKACC);
+	syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL1,
+					CPG_VSP_LPC1_CLKQREQ | CPG_VSP_LPC1_PWRDQREQ,
+					CPG_VSP_LPC1_CLKACC, CPG_VSP_LPC1_CLKACC);
+	syscon_set_sync(vdev->syscon_cpg, CPG_LP_VSP_CTL2,
+					CPG_VSP_LPC2_PWRDQREQ,
+					CPG_VSP_LPC1_CLKACC, CPG_VSP_LPC1_CLKACC);
+	return ercd;
+}
+
 const struct vspm_device_ops r9a09g047_fdp_ops = {
 	.power_on			= r9a09g047_fdp_power_on,
 	.power_off			= r9a09g047_fdp_power_off,
 	.require_features	= VSPM_DT_SYSCON_CPG,
+};
+
+const struct vspm_device_ops r9a09g047_vsp_ops = {
+	.power_on			= r9a09g047_vsp_power_on,
+	.power_off			= r9a09g047_vsp_power_off,
+	.require_features	= VSPM_DT_SYSCON_CPG | VSPM_DT_SYSCON_SYSC,
 };

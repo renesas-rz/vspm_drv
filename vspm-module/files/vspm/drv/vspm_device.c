@@ -80,6 +80,7 @@ const struct vspm_device_config r9a09g047_vsp_config =
 {
 	.clk_names = { "vsp_mclk", "vsp_aclk", "vsp_pclk" },
 	.rst_names = { "smreset_vspiss", "sreset_vsp1z", "spreset_fcpvi0" },
+	.ops = &r9a09g047_vsp_ops,
 };
 
 const struct vspm_device_config r9a09g047_fdp_config =
