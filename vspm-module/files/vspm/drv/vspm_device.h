@@ -94,6 +94,11 @@ struct isu_hw_prv_info {
 	struct isu_param_limit max;
 };
 
+struct vspm_device_ops {
+	int (*power_on)(struct device *dev);
+	int (*power_off)(struct device *dev);
+};
+
 struct vspm_device_config {
 	const char *clk_names[VSPM_CLKNUM_MAX];
 	const char *rst_names[VSPM_CLKNUM_MAX];
@@ -102,6 +107,7 @@ struct vspm_device_config {
 		struct fdp_hw_prv_info fdp;
 		struct isu_hw_prv_info isu;
 	} hw_prv_info;
+	struct vspm_device_ops *ops;
 };
 
 struct vspm_device {

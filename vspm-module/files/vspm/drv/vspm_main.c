@@ -584,17 +584,22 @@ static int vspm_pm_runtime_suspend(struct device *dev)
 	int ret = -1;
 	int i;
 
-	for (i = 0; i < vdev->num_rsts; i++) {
-		if (vdev->rsts[i]) {
-			ret = reset_control_assert(vdev->rsts[i]);
-			if (ret) {
-				EPRINT("%s: Fail to assert reset %d \n", __func__, i);
+	if (vdev->config->ops && vdev->config->ops->power_off) {
+		ret = vdev->config->ops->power_off(dev);
+		if (ret)
+			EPRINT("%s: Fail to power off device\n",__func__);
+	} else {
+		for (i = 0; i < vdev->num_rsts; i++) {
+			if (vdev->rsts[i]) {
+				ret = reset_control_assert(vdev->rsts[i]);
+				if (ret)
+					EPRINT("%s: Fail to assert reset %d \n", __func__, i);
 			}
 		}
-	}
-	for (i = 0; i < vdev->num_clks; i++) {
-		if (vdev->clks[i])
-			clk_disable_unprepare(vdev->clks[i]);
+		for (i = 0; i < vdev->num_clks; i++) {
+			if (vdev->clks[i])
+				clk_disable_unprepare(vdev->clks[i]);
+		}
 	}
 
 	return 0;
@@ -607,19 +612,23 @@ static int vspm_pm_runtime_resume(struct device *dev)
 	int ret = -1;
 	int i;
 
-	for (i = 0; i < vdev->num_clks; i++) {
-		if (vdev->clks[i]) {
-			ret = clk_prepare_enable(vdev->clks[i]);
-			if (ret) {
-				EPRINT("%s: Fail to enable clock %d \n", __func__, i);
+	if (vdev->config->ops && vdev->config->ops->power_on) {
+		ret = vdev->config->ops->power_on(dev);
+		if (ret)
+			EPRINT("%s: Fail to power on device\n",__func__);
+	} else {
+		for (i = 0; i < vdev->num_clks; i++) {
+			if (vdev->clks[i]) {
+				ret = clk_prepare_enable(vdev->clks[i]);
+				if (ret)
+					EPRINT("%s: Fail to enable clock %d \n", __func__, i);
 			}
 		}
-	}
-	for (i = 0; i < vdev->num_rsts; i++) {
-		if (vdev->rsts[i]) {
-			ret = reset_control_deassert(vdev->rsts[i]);
-			if (ret) {
-				EPRINT("%s: Fail to deassert reset %d \n", __func__, i);
+		for (i = 0; i < vdev->num_rsts; i++) {
+			if (vdev->rsts[i]) {
+				ret = reset_control_deassert(vdev->rsts[i]);
+				if (ret)
+					EPRINT("%s: Fail to deassert reset %d \n", __func__, i);
 			}
 		}
 	}
