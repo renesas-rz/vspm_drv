@@ -62,9 +62,13 @@
 #include <linux/sys_soc.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
+#include <linux/regmap.h>
 
 #define VSPM_CLKNUM_MAX			3
 #define VSPM_RSTNUM_MAX			3
+
+/* Indicator for require features on devices ops */
+#define VSPM_DT_SYSCON_CPG		(BIT(0))
 
 /* Indicator for features on different SoC */
 #define ISU_FM_INT_EDGE			(BIT(0))
@@ -97,6 +101,7 @@ struct isu_hw_prv_info {
 struct vspm_device_ops {
 	int (*power_on)(struct device *dev);
 	int (*power_off)(struct device *dev);
+	unsigned short require_features;
 };
 
 struct vspm_device_config {
@@ -107,7 +112,7 @@ struct vspm_device_config {
 		struct fdp_hw_prv_info fdp;
 		struct isu_hw_prv_info isu;
 	} hw_prv_info;
-	struct vspm_device_ops *ops;
+	const struct vspm_device_ops *ops;
 };
 
 struct vspm_device {
@@ -116,6 +121,7 @@ struct vspm_device {
 	int num_clks;
 	int num_rsts;
 	const struct vspm_device_config *config;
+	struct regmap *syscon_cpg;
 };
 
 int vspm_device_get_clks(struct platform_device *pdev, struct vspm_device *vdev);
@@ -124,5 +130,7 @@ int vspm_device_get_rsts(struct platform_device *pdev, struct vspm_device *vdev)
 extern const struct soc_device_attribute vsp_config_attrs[];
 extern const struct soc_device_attribute fdp_config_attrs[];
 extern const struct soc_device_attribute isu_config_attrs[];
+
+extern const struct vspm_device_ops r9a09g047_fdp_ops;
 
 #endif /* __VSPM_DEVICE_H__ */

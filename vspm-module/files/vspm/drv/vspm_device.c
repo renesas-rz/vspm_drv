@@ -86,6 +86,7 @@ const struct vspm_device_config r9a09g047_fdp_config =
 {
 	.clk_names = { "fdp_mclk", "fdp_aclk", "fdp_pclk" },
 	.rst_names = { "brdg_resetn", "fdp1_resetn", "fcpf1_resetp" },
+	.ops = &r9a09g047_fdp_ops,
 };
 
 /* RZ/G2L Series and RZ/V2L */

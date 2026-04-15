@@ -5,6 +5,7 @@ CFILES += manager/vspm_job_manager.c manager/vspm_lib.c manager/vspm_sort_queue.
 CFILES += vsp/vsp_drv.c vsp/vsp_drv_phy.c vsp/vsp_drv_par.c
 CFILES += fdp/fdp_drv.c fdp/fdp_drv_l.c
 CFILES += isu/isu_drv.c isu/isu_drv_phy.c isu/isu_drv_par.c
+CFILES += soc/r9a09g047_info.c
 
 obj-m += vspm.o
 vspm-objs := $(CFILES:.c=.o)

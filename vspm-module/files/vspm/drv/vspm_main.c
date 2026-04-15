@@ -64,6 +64,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
 #include <linux/reset.h>
+#include <linux/mfd/syscon.h>
 
 #include "vspm_public.h"
 #include "vspm_ip_ctrl.h"
@@ -383,6 +384,7 @@ static int vspm_fdp_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct vspm_device *vdev = NULL;
 	const struct soc_device_attribute *attr = NULL;
+	struct regmap *syscon = NULL;
 	int ret = 0;
 	int ch;
 
@@ -427,6 +429,16 @@ static int vspm_fdp_probe(struct platform_device *pdev)
 	if (ret) {
 		APRINT("Failed to get rst array for FDP!! ch=%d\n", ch);
 		return -1;
+	}
+
+	if ((vdev->config->ops) &&
+		(vdev->config->ops->require_features & VSPM_DT_SYSCON_CPG)) {
+		syscon = syscon_regmap_lookup_by_phandle(np, "renesas,syscon-cpg");
+		if (IS_ERR(syscon)) {
+			EPRINT("failed to get syscon regmap for CPG\n");
+			return -1;
+		}
+		vdev->syscon_cpg = syscon;
 	}
 
 	/* set driver data */
