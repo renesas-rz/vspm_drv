@@ -173,13 +173,13 @@ const struct vspm_device_config r9a09g056_isu_config =
 const struct soc_device_attribute vsp_config_attrs[] = {
 	{ .soc_id = "r8a774*"  , .data = &r8a774_vsp_config },
 	{ .soc_id = "r9a09g047", .data = &r9a09g047_vsp_config },
-	/* sentinel */
+	{ /* sentinel */ },
 };
 
 const struct soc_device_attribute fdp_config_attrs[] = {
 	{ .soc_id = "r8a774*"  , .data = &r8a774_fdp_config },
 	{ .soc_id = "r9a09g047", .data = &r9a09g047_fdp_config },
-	/* sentinel */
+	{ /* sentinel */ },
 };
 
 const struct soc_device_attribute isu_config_attrs[] = {
@@ -188,7 +188,7 @@ const struct soc_device_attribute isu_config_attrs[] = {
 	{ .soc_id = "r9a08g046", .data = &r9a08g046_isu_config },
 	{ .soc_id = "r9a09g056", .data = &r9a09g056_isu_config },
 	{ .soc_id = "r9a09g057", .data = &r9a09g056_isu_config },
-	/* sentinel */
+	{ /* sentinel */ },
 };
 
 /******************************************************************************
