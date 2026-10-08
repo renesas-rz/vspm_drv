@@ -183,6 +183,7 @@ const struct soc_device_attribute fdp_config_attrs[] = {
 };
 
 const struct soc_device_attribute isu_config_attrs[] = {
+	{ .soc_id = "r9a07g043", .data = &r9a07g044_isu_config },
 	{ .soc_id = "r9a07g044", .data = &r9a07g044_isu_config },
 	{ .soc_id = "r9a07g054", .data = &r9a07g044_isu_config },
 	{ .soc_id = "r9a08g046", .data = &r9a08g046_isu_config },
